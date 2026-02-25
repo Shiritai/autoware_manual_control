@@ -4,8 +4,14 @@ on:
   push:
     branches: [ "main", "feat/*" ] # Allow testing on feature branches
     tags: [ 'v*.*.*' ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 env:
