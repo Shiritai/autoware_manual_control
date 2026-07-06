@@ -195,13 +195,13 @@ ros2 run autoware_manual_control zenoh_control --ros-args --params-file config/t
 <li><strong>from an <code>rmw_zenoh</code> workspace</strong> — the Zenoh vendor is already bundled; point CMake at it with <code>-DZENOH_VENDOR_PREFIX=/path/to/.../zenoh_cpp_vendor</code> (or export the env var of the same name), and add its <code>lib</code> to <code>LD_LIBRARY_PATH</code>.</li>
 </ul>
 <h2 id="the-ros-free-build-native_zenoh"><a class="header" href="#the-ros-free-build-native_zenoh">The ROS-free build (<code>native_zenoh</code>)</a></h2>
-<p>With <code>TELEOP_AUTOWARE_TRANSPORT=native_zenoh</code>, <code>ament_cmake</code> is optional and skipped when absent (<code>CMakeLists.txt</code>): the package builds as a plain CMake project. The dependencies are only the Zenoh SDK, <code>nlohmann_json</code>, a system <code>libyaml</code> (linked <strong>static</strong>, so no <code>libyaml.so</code> joins the runtime), and Fast-CDR — which CMake fetches itself (<code>FetchContent</code>, pinned <code>v1.1.1</code>, built static + PIC and folded into the binary). No ROS, no message packages, no rosidl tooling.</p>
+<p>With <code>TELEOP_AUTOWARE_TRANSPORT=native_zenoh</code>, <code>ament_cmake</code> is optional and skipped when absent (<code>CMakeLists.txt</code>): the package builds as a plain CMake project. The dependencies are only the Zenoh SDK, <code>nlohmann_json</code>, a system <code>libyaml</code> (linked <strong>static</strong>, so no <code>libyaml.so</code> joins the runtime), and Fast-CDR — which CMake fetches itself (<code>FetchContent</code>, pinned <code>v1.1.1</code>, built static + PIC and folded into the binary). No ROS, no message packages, no rosidl tooling. Configure from a shell that has <strong>not</strong> sourced ROS: a sourced environment makes CMake find <code>ament_cmake</code> and take the ament path instead.</p>
 <pre><code class="language-bash">cmake -S . -B build \
   -DTELEOP_AUTOWARE_TRANSPORT=native_zenoh \
   -DTELEOP_WITH_ZENOH=ON -DTELEOP_WITH_KEYBOARD=OFF \
   -DZENOH_VENDOR_PREFIX=/path/to/zenoh   # omit if zenohc/zenohcxx are installed system-wide
 cmake --build build -j
-./build/zenoh_control --config config/teleop.yaml
+./build/zenoh_control --config config/teleop.example.yaml   # or your config/teleop.yaml copy
 </code></pre>
 <p>The resulting binary links only <code>libzenohc</code>, the static Fast-CDR and the static libyaml, plus the C/C++ runtime — and its wire bytes are correct by construction: it runs the same <code>rosidl_typesupport_fastrtps_cpp</code> serialiser <code>rmw_fastrtps</code> uses (see <a href="autoware-transport.html">Autoware Transport</a>). You can also build the local-terminal operator with no ROS by flipping the I/O flags (<code>-DTELEOP_WITH_KEYBOARD=ON -DTELEOP_WITH_ZENOH=OFF</code>); CMake then builds <code>keyboard_control</code> against the same ROS-free transport.</p>
 <h2 id="idl-static-vendoring"><a class="header" href="#idl-static-vendoring">IDL static vendoring</a></h2>
@@ -216,7 +216,7 @@ tools/vendor_idl.sh                 # rewrites src/transport/zenoh/generated/, t
 <li>Builds the rosidl generators from the tiny <code>tools/regen</code> ament package (<code>tools/regen/CMakeLists.txt</code> lists the wire contract as <code>TELEOP_MSG_IDL</code>; <code>stage_idl.py</code> stages the installed <code>.idl</code> under this project's namespace so the generated types are namespaced correctly). <code>tools/COLCON_IGNORE</code> keeps this helper package out of the normal workspace build.</li>
 <li>Copies the generated <code>rosidl_generator_cpp</code> and <code>rosidl_typesupport_fastrtps_cpp</code> output into <code>src/transport/zenoh/generated/</code>.</li>
 <li>Computes the include closure of that generated code with <code>g++ -M</code> and vendors the external rosidl runtime headers it pulls in (<code>rosidl_runtime_c</code>, <code>rosidl_runtime_cpp</code>, <code>rosidl_typesupport_*</code>, <code>rmw</code>, <code>rcutils</code>).</li>
-<li>Writes the files and reports the counts — it does not <code>git add</code> them, so commit the result yourself.</li>
+<li>Reports the counts — it does not <code>git add</code> anything, so commit the result yourself.</li>
 </ol>
 <p>After regenerating, the CI golden-drift guard (<a href="testing.html">Testing &amp; CI</a>) confirms the new bytes still match a live rmw. CI flags when a regen is <em>due</em> by failing that same guard against the old committed bytes.</p>
 
